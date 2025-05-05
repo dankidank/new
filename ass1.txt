@@ -1,0 +1,98 @@
+run 
+javac *.java
+rmiregistry 2000
+java Server
+java Client
+
+// client.java 
+import java.rmi.Naming;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) {
+
+        int a, b;
+        Scanner sc = new Scanner(System.in);
+        System.out.println("|-|-|-|-|-|-|-|-|-|-|"); 
+        System.out.print("Enter 1st number : "); 
+        a = sc.nextInt();
+        System.out.print("Enter 2nd number : "); 
+        b = sc.nextInt();
+        sc.close();
+        try {
+            // Look up the remote object in the RMI registry
+            MathOperationInft math = (MathOperationInft) Naming.lookup("rmi://localhost:2000/Calculator");
+            
+            // Call the remote method
+            int result = math.add(a, b);
+            
+            System.out.println("Result of addition: " + result);
+            System.out.println("|-|-|-|-|-|-|-|-|-|-|");
+
+        } catch (Exception e) {
+            System.err.println("Client exception: " + e.toString());
+            e.printStackTrace();
+        }
+
+    }
+}
+
+
+
+//interface of math op
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+// Server Interface 
+public interface MathOperationInft extends Remote{
+    public int add(int a, int b) throws RemoteException;
+}
+
+
+
+// math operation implt
+// server interface implementation
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+public class MathOperationImplt extends UnicastRemoteObject implements MathOperationInft {
+    public MathOperationImplt() throws RemoteException{
+        super();
+    }
+
+    // Implemetation of add method
+    public int add(int a, int b) throws RemoteException{
+        System.out.println("Server Addding a: " + a + " b: " + b);
+        return a + b;
+    }
+
+}
+
+// server 
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+
+public class Server {
+    // public Server() throws RemoteException{
+    //     super();
+    // }
+    public static void main(String[] args) throws RemoteException
+    {
+        Registry reg = LocateRegistry.createRegistry(2000);
+        
+        MathOperationImplt calci = new MathOperationImplt();
+        
+        reg.rebind("Calculator", calci);
+
+        try {
+            System.out.println("|-|-|-|-|-|-|-|-|-|-|");
+            System.out.println("Server is Waiting.....");
+
+        } catch (Exception e) {
+            System.out.println("Exception Occured: " + e.toString());
+        }
+    }
+}
+

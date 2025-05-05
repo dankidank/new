@@ -1,0 +1,132 @@
+// Client.java
+import StringApp.*; // Corrected import syntax
+import org.omg.CORBA.*;
+import org.omg.CosNaming.*;
+import org.omg.CosNaming.NamingContextPackage.*;
+
+public class Client { //
+    public static void main(String args[]) {
+        try {
+            // Initialize the ORB
+            ORB orb = ORB.init(args, null); //
+            // Get the root naming context
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService"); //
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef); //
+
+            // Resolve the Object Reference in Naming
+            String name = "StringOperations"; //
+            StringOperations stringOp = StringOperationsHelper.narrow(ncRef.resolve_str(name)); //
+
+            // Perform string operations
+            // Corrected concatenate spelling
+            System.out.println("Concatenation: " + stringOp.concatenate("Hello", "World"));
+            System.out.println("Uppercase: " + stringOp.uppercase("hello")); //
+            System.out.println("Lowercase: " + stringOp.lowercase("WORLD")); //
+            System.out.println("Reverse: " + stringOp.reverse("CORBA")); //
+            // Corrected variable typo and called length method
+            System.out.println("Length of String: " + stringOp.length("I am your father")); // Using a different string for length
+
+        } catch (Exception e) {
+            System.out.println("ERROR : " + e); //
+            e.printStackTrace(System.out); //
+        }
+    }
+}
+
+
+// server
+import StringApp.*;
+import org.omg.CORBA.*;
+import org.omg.PortableServer.*;
+import org.omg.PortableServer.POA;
+
+public class Server {
+    public static void main(String[] args) {
+        try {
+            // Initialize the ORB
+            ORB orb = ORB.init(args, null);
+            // Get reference to root POA and activate the POAManager
+            POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            rootpoa.the_POAManager().activate();
+
+            // Create servant and register it with the ORB
+            StringOperationsImpl stringImpl = new StringOperationsImpl();
+
+            // Get object reference from the servant
+            org.omg.CORBA.Object ref = rootpoa.servant_to_reference(stringImpl);
+            StringOperations href = StringOperationsHelper.narrow(ref);
+
+            // Get the root naming context
+            org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService");
+            NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
+
+            // Bind the Object Reference in Naming
+            String name = "StringOperations";
+            NameComponent path[] = ncRef.to_name(name);
+            ncRef.rebind(path, href);
+
+            System.out.println("StringOperations Server ready and waiting...");
+
+            // Wait for invocations from clients
+            orb.run();
+        } catch (Exception e) {
+            System.err.println("ERROR: " + e);
+            e.printStackTrace(System.out);
+        }
+    }
+}
+
+
+// StringOperations
+// StringOperationsImpl.java
+import StringApp.StringOperationsPOA; // Ensure this import is present
+
+// Corrected class name and inheritance
+public class StringOperationsImpl extends StringOperationsPOA {
+
+    // Corrected method name
+    public String concatenate(String str1, String str2){
+        System.out.println("Server: Concatenating '" + str1 + "' and '" + str2 + "'");
+        return str1 + str2; //
+    }
+
+    public String uppercase(String str){
+        System.out.println("Server: Converting '" + str + "' to uppercase");
+        return str.toUpperCase(); //
+    }
+
+    public String lowercase(String str) {
+        System.out.println("Server: Converting '" + str + "' to lowercase");
+        return str.toLowerCase(); //
+    }
+
+    public String reverse(String str) {
+        System.out.println("Server: Reversing string '" + str + "'");
+        return new StringBuilder(str).reverse().toString(); //
+    }
+
+    // Corrected method signature and implementation for length
+    public int length(String str) { // Return int (Java maps IDL long often to int)
+        System.out.println("Server: Finding Length of String '"+ str + "'");
+        return str.length(); // Return the actual length
+    }
+}
+
+
+// StringOperations.idl
+
+module StringApp {
+    interface StringOperations {
+        string concatenate(in string str1, in string str2); // Corrected spelling
+        string uppercase(in string str);
+        string lowercase(in string str);
+        string reverse(in string str);
+        long length(in string str); // Corrected spelling and return type (using long is common in IDL)
+    };
+};
+
+idlj -fall StringOperations.idl
+javac *.java StringApp/*.java
+orbd -ORBInitialPort 1050
+new terminal java Server -ORBInitialPort 1050 -ORBInitialHost localhost
+new terminal java Client -ORBInitialPort 1050 -ORBInitialHost localhost
